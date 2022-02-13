@@ -5,10 +5,13 @@
 2. Changed the drawMap function to be as generic as posible.
 3. Changed the drawPlayer function to the drawObject function. */
 
-const Display = function(canvas) {
+const Display = function() {
 
-  this.buffer  = document.createElement("canvas").getContext("2d"),
-  this.context = canvas.getContext("2d");
+  this.buffer  = document.createElement("canvas").getContext("2d")
+
+  let canvas = document.createElement('canvas')
+  this.context = canvas.getContext("2d")
+  document.querySelector('body').appendChild(canvas)
 
   /* This function draws the map to the buffer. */
   this.drawMap = function(image, image_columns, map, map_columns, tile_size) {

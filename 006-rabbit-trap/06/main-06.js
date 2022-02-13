@@ -142,7 +142,7 @@ window.addEventListener("load", function(event) {
 
   var assets_manager = new AssetsManager();
   var controller     = new Controller();
-  var display        = new Display(document.querySelector("canvas"));
+  var display        = new Display();
   var game           = new Game();
   var engine         = new Engine(1000/30, render, update);
 

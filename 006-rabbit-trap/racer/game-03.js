@@ -24,11 +24,14 @@ class Game {
 
 /* The world is now its own class. */
 Game.World = class {
-  constructor(friction = 0.90) {
+  constructor(friction = 0.93, lap_length=40) {
+
+    this.height   = 1000
+    this.width    = 2000
+
+    this.lap_length = lap_length
 
     this.friction = friction;
-
-    this.player   = new Game.World.Player();
 
     this.score = 0
 
@@ -39,13 +42,16 @@ Game.World = class {
 
     let outside_points = []
     let inside_points = []
-    let center = {x: 1000, y: 500}
-    for (let angle = 0; angle < Math.PI*2; angle +=Math.PI/800) {
-      let size = 500
-      let outside_point = add_coords({x: 2 * size*Math.cos(angle), y: size*Math.sin(angle)}, center)
+    let center = {x: this.width/2, y: this.height/2}
+    let ratio = this.width/this.height
+    let outer_size = this.height/2
+    let inner_size = outer_size*.7
+    for (let angle = 0; angle < Math.PI*2; angle +=Math.PI*2/lap_length) {
+      let size = outer_size
+      let outside_point = add_coords({x: ratio * size*Math.cos(angle), y: size*Math.sin(angle)}, center)
       outside_points.push(outside_point)
-      size *= .85
-      let inside_point = add_coords({x: 2 * size*Math.cos(angle), y: size*Math.sin(angle)}, center)
+      size = inner_size
+      let inside_point = add_coords({x: ratio * size*Math.cos(angle), y: size*Math.sin(angle)}, center)
       inside_points.push(inside_point)
     }    
 
@@ -67,10 +73,8 @@ Game.World = class {
 
       this.map.targets.push(new Game.World.Target(point, inside_point))
     }
-    
 
-    this.height   = 1000
-    this.width    = 2000
+    this.player   = new Game.World.Player(this.width, this.height, outer_size-inner_size);
 
   };
 
@@ -85,12 +89,16 @@ Game.World = class {
 
     for (let wall of this.map.walls) {
       if (wall.collideObject(this.player)) {
-        this.score -= 1
+        this.score -= 10
       }
     }
     for (let target of this.map.targets) {
-      if (target.collideObject(this.player)) {
-        this.score++
+      let collision = target.collideObject(this.player)
+      switch(collision) {
+        case false: break;
+        case "back": this.score--; break;
+        case "right" || "left" : break;
+        case "front": this.score++; break;
       }
     }   
 
@@ -106,6 +114,8 @@ Game.World.Object = class {
 
   collideObject(object) {
 
+    let object_borders = object.getBorders()
+
     let p0 = this.start
     let p1 = this.end
 
@@ -116,7 +126,7 @@ Game.World.Object = class {
     let b = p0.y - a * p0.x
 
     // Loop through all object borders
-    for (let object_border of Object.entries(object.getBorders()) ) {
+    for (let object_border of Object.entries(object_borders) ) {
       let border_name = object_border[0]
       let border_points = object_border[1]
 
@@ -165,11 +175,61 @@ Game.World.Object = class {
       // Check if there is a collision
       if (intersect_x >= left_bound && intersect_x <= right_bound && intersect_x >= left_bound_object && intersect_x <= right_bound_object) {
         object.collision(this.type)
-        if ( this.collision(border_name) ) {
-          return true          
+        if ( this.collision() ) {
+          return border_name          
         }
       }
 
+    }
+
+    // Loop through additional sensors
+    for (let sensor of ["diagFrontLeft", "diagFrontRight"] ) {
+      let border_points = object_borders.front
+
+      let q0
+      switch(sensor) {
+        case "diagFrontLeft": 
+          q0 = border_points[0]
+          break
+        case "diagFrontRight":
+          q0 = border_points[1]
+          break
+      }
+      let q1 = {x: object.getCx(), y: object.getCy()}
+
+      let c = (q1.y - q0.y)/(q1.x - q0.x)
+      let d = q0.y - c * q0.x
+
+      /* ax+b=cx+d -> (a-c)x=d-b -> x=(d-b)/(a-c) */
+      let intersect_x = (d-b)/(a-c)
+      let intersection = {x: intersect_x, y: a*intersect_x + b}
+
+      // Add intersections for distance detection
+      if (this.type == "wall" && intersect_x >= left_bound && intersect_x <= right_bound) {
+
+        let distance0 = get_distance(intersection, q0)
+        let distance1 = get_distance(intersection, q1)
+        let side
+        if (distance0 < distance1) {
+          side = 0
+        } else {
+          continue
+        }
+
+        let direction = "diag"
+        let corner_name
+        switch(sensor) {
+          case "diagFrontLeft":   corner_name = "frontLeft";  break
+          case "diagFrontRight":  corner_name = "frontRight";  break
+        }
+
+        // If there was already an intersection with another wall from this sensor
+        let distance = distance0
+        let former_distance = object.sensors[corner_name][direction].distance
+        if(!former_distance || distance < former_distance) {
+          object.sensors[corner_name][direction] = {x: intersect_x, y: a*intersect_x + b, distance: distance}
+        }
+      }
     }
 
     // Set object to normal if no collisions
@@ -191,13 +251,10 @@ Game.World.Target = class extends Game.World.Object {
     this.timeout = 0
   }
 
-  collision(border_name) {
+  collision() {
     let res = (this.timeout == 0)
-    switch(border_name) {
-      case "front": this.timeout = 100; return res;
-      case "left" || "right": this.timeout = 100; return res;
-      case "back": this.timeout = 100; return false;
-    }
+    this.timeout = 200 
+    return res
   }
 
   noCollision() {
@@ -215,23 +272,32 @@ Game.World.Wall = class extends Game.World.Object {
 }
 
 Game.World.Player = class {
-  constructor() {
+  constructor(world_width, world_height, track_width) {
     this.color1     = "#ff0000";
     this.color2     = "#f0f0f0";
-    this.height     = 50;
-    this.width      = 25;
+    this.height     = world_height/20;
+    this.width      = this.height/2;
     this.velocity   = {
       x: 0,
       y: 0,
     }
+
     this.direction  = 0;
-    this.x          = 900;
+    this.x          = world_width/2 - this.height;
     if (Math.random() > 0) {
-      this.y          = 20;
+      this.y          = track_width/2 - this.width;
     } else {
-      this.y          = 940;
+      this.y          = world_height - track_width/2 - this.width/2;
     }
-    this.turn_speed = .1;
+
+    // this.direction  = -Math.PI/2;
+    // this.x          = track_width;
+    // this.y          = world_height/2 - this.width;
+ 
+
+    this.turn_speed = -.1;
+    this.acceleration = 1
+    this.steering = 0
 
     this.dead = false
 
@@ -239,10 +305,12 @@ Game.World.Player = class {
       frontLeft: {
         straight: {x: null, y: null, distance: 0},
         side:     {x: null, y: null, distance: 0},
+        diag:     {x: null, y: null, distance: 0},
       },
       frontRight: {
         straight: {x: null, y: null, distance: 0},
         side:     {x: null, y: null, distance: 0},
+        diag:     {x: null, y: null, distance: 0},
       },
       backLeft: {
         straight: {x: null, y: null, distance: 0},
@@ -321,37 +389,46 @@ Game.World.Player = class {
     for (let corner_sensors of Object.values(this.sensors) ) {
       corner_sensors.straight = {x: null, y: null, distance: 0}
       corner_sensors.side = {x: null, y: null, distance: 0}  
+      corner_sensors.diag = {x: null, y: null, distance: 0}  
     }      
   }
 
-  moveForward() {   
+  moveForward(factor=1) {   
     if (vector_signed_length(this.velocity, this.direction) < 50) {
-      this.velocity = add_to_vector(this.velocity, this.direction, 2)
+      this.velocity = add_to_vector(this.velocity, this.direction, factor*this.acceleration)
     }
   }
   moveBackward() {    
     if (vector_signed_length(this.velocity, this.direction) > -10) {
-      this.velocity = add_to_vector(this.velocity, this.direction, -2)
+      this.velocity = add_to_vector(this.velocity, this.direction, -this.acceleration)
     }
   }
 
   turnLeft()  {
-    let turn_speed = this.turn_speed
-    //  * Math.min(vector_length(this.velocity)/5, 1)
+    let turn_speed = this.turn_speed * Math.min(vector_length(this.velocity)/5, 1)
     //  * vector_sign(this.velocity, this.direction)
     this.direction += turn_speed
   }
   turnRight() { 
-    let turn_speed = this.turn_speed
-    //  * Math.min(vector_length(this.velocity)/5, 1)
+    let turn_speed = this.turn_speed * Math.min(vector_length(this.velocity)/5, 1)
     //  * vector_sign(this.velocity, this.direction)
     this.direction -= turn_speed
   }  
 
+  // turnLeft()  {
+  //   this.steering += this.turn_speed/10
+  // }
+  // turnRight() { 
+  //   this.steering -= this.turn_speed/10
+  // }
+
   update() {
+
+    this.moveForward(.01)
 
     this.x += this.velocity.x;
     this.y += this.velocity.y;
+    // this.direction += this.steering;
 
   }
 

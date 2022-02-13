@@ -6,13 +6,15 @@ dimensions.
 I got rid of the drawRectangle function and replaced it with the drawPlayer function. */
 
 class Display {
-  constructor(canvas) {
+  constructor() {
 
     this.buffer  = {
       map: document.createElement("canvas").getContext("2d"),
       player: document.createElement("canvas").getContext("2d"),
     }
-    this.context = canvas.getContext("2d");
+    let canvas = document.createElement('canvas')
+    this.context = canvas.getContext("2d")
+    document.querySelector('body').appendChild(canvas)
 
   }
 
@@ -29,10 +31,10 @@ class Display {
       let object_list = mapObjectLists[1]
       let color
       switch(object_name) {
-        case "targets": color = "#00ff00"
-        case "walls":   color = "#999999"
+        case "targets": color = "#00ff00"; break;
+        case "walls":   color = "#999999"; break;
       }
-      this.buffer.map.strokeStyle = color // overwrites other color?
+      this.buffer.map.strokeStyle = color
 
       for (let object of object_list) {
         if (object.timeout > 0) continue;

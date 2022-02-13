@@ -98,8 +98,9 @@ export class OutputLayer extends Layer {
             for (let k = 0; k < prev_activations.length; k++) {
                 z += this.weights[j][k] * prev_activations[k]
             }
-            this.zs.push(z)
-            this.activations.push( sigmoid(z) )
+            // this.zs.push(z)
+            // this.activations.push( sigmoid(z) )
+            this.activations.push( z )
 
             if (labels) {
                 cost += Math.pow(this.activations[j] - parseInt(labels[j]), 2)                
@@ -123,7 +124,8 @@ export class OutputLayer extends Layer {
         let prev_a_nudges = []
         for (let j = 0; j < this.size; j++) {
             let d_a = 2*(this.activations[j] - this.labels[j]) // derivative of Cost with respect to the activation (only for the last layer)
-            let d_bias = sigmoid_prime(this.zs[j]) * d_a // derivative of Cost with respect to the bias
+            // let d_bias = sigmoid_prime(this.zs[j]) * d_a // derivative of Cost with respect to the bias
+            let d_bias = d_a // derivative of Cost with respect to the bias
             this.total_bias_nudges[j] += d_bias
 
             for (let k = 0; k < this.prev_layer.size; k++) {

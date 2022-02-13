@@ -6,6 +6,7 @@
 
     <!-- Added this meta tag 04/07/2018 -->
     <meta name = "viewport" content = "user-scalable=no,width=device-width">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" rel="stylesheet">
     <link href = "rabbit-trap.css" rel = "stylesheet" type = "text/css">
     <title>Rabbit Trap</title>
 
@@ -15,7 +16,7 @@
 
     <!-- Added a menu to navigate projects from the main page -->
     <div id = "menu">
-      <p>menu</p>
+      <a>menu</a>
       <div id = "menu-list">
         <br>
         <a href = "index.html?01">part1</a>
@@ -26,10 +27,19 @@
         <a href = "index.html?06">part6</a>
         <a href = "index.html?07">part7</a>
         <a href = "index.html?racer">racer</a>
+        <a href = "index.html?cartpole">cartpole</a>
+        <a href = "index.html?maze">maze</a>
+        <a href = "index.html?stratego">stratego</a>
       </div>
     </div>
-
-    <canvas></canvas>
+    
+    <!-- <table><tr><td>
+      <input style="width: 500px;" type="range" min="0" max="1000" value="50" oninput="changeEngineSpeed(this.value)">
+    </td><td>
+      <input type="checkbox" checked="true" oninput="changeRender(this.checked)">
+    </td><td>
+      <div id="engineSpeed" style="color: white">fps</div>
+    </td></tr></table> -->
 
     <!-- Since Rabbit Trap is a multi-part series and I didn't feel like writing
     html and css for every single part, I decided to dynamically add the appropriate
@@ -48,16 +58,25 @@
         "05":["02/controller-02.js", "05/display-05.js", "01/engine-01.js", "05/game-05.js", "05/main-05.js"],
         "06":["02/controller-02.js", "05/display-05.js", "06/engine-06.js", "06/game-06.js", "06/main-06.js"],
         "07":["02/controller-02.js", "05/display-05.js", "06/engine-06.js", "07/game-07.js", "07/main-07.js"],
-        "racer":["racer/controller-02.js", "racer/display-03.js", "01/engine-01.js", "racer/game-03.js", "racer/main-03.js"],
+        "racer":["racer/controller-02.js", "racer/display-03.js", "racer/engine-01.js", "racer/game-03.js", "racer/main-03.js"],
+        "cartpole":["cartpole/controller-02.js", "cartpole/display-03.js", "cartpole/engine-01.js", "cartpole/game-03.js", "cartpole/main-03.js"],
+        "maze":["maze/controller-02.js", "maze/display-03.js", "maze/engine-01.js", "maze/game-03.js", "maze/main-03.js"],
+        "stratego":["stratego/controller-02.js", "stratego/display-03.js", "stratego/engine-01.js", "stratego/game-03.js", "stratego/main-03.js"],
 
       };
 
-      switch(part) {
+      // switch(part) {
 
-        case "01": case "02": case "03": case "04": case "05": case "06": case "07": case "racer": break;
-        default:
-          part = "racer";
+      //   case "01": case "02": case "03": case "04": case "05": case "06": case "07": case "racer": case "cartpole": case "maze": case "stratego": break;
+      //   default:
+      //     part = "cartpole";
 
+      // }
+
+      if (!Object.keys(parts).includes(part)) {
+        part = 'cartpole'
+        let url = String(window.location).split('?')[0] + '?' + part
+        window.location.href = url
       }
 
       for (let index = 0; index < parts[part].length; index ++) {
@@ -71,7 +90,7 @@
 
       let script = document.createElement("script");
       script.setAttribute("type", "module");
-      script.setAttribute("src", "racer/net_controller.js");
+      script.setAttribute("src", "ai/net_controller.js");
       document.head.appendChild(script);      
 
       let menu      = document.getElementById("menu");
